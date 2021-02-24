@@ -30,9 +30,8 @@ android {
         applicationId = "com.machiav3lli.backup"
         minSdkVersion(26)
         targetSdkVersion(29)
-        versionCode = 5001
-        versionName = "5.0.1"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 5002
+        versionName = "5.0.2"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments(mapOf("room.schemaLocation" to "$projectDir/schemas", "room.incremental" to "true"))
