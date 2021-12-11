@@ -55,6 +55,7 @@ import java.io.FileOutputStream
 import java.lang.ref.WeakReference
 
 
+
 class MainActivityX : BaseActivity() {
 
     companion object {
