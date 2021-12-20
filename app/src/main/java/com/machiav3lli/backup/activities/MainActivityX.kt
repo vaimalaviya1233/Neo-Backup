@@ -23,8 +23,12 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.AssetManager
 import android.os.Bundle
+import android.os.Looper
+import android.os.PersistableBundle
+import android.os.Process
 import android.view.MenuItem
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
@@ -38,7 +42,9 @@ import com.machiav3lli.backup.dbs.AppExtrasDatabase
 import com.machiav3lli.backup.dbs.BlocklistDatabase
 import com.machiav3lli.backup.fragments.ProgressViewController
 import com.machiav3lli.backup.fragments.RefreshViewController
+import com.machiav3lli.backup.handler.LogsHandler
 import com.machiav3lli.backup.handler.ShellHandler
+import com.machiav3lli.backup.handler.ShellHandler.Companion.runAsRoot
 import com.machiav3lli.backup.items.*
 import com.machiav3lli.backup.utils.*
 import com.machiav3lli.backup.viewmodels.MainViewModel
@@ -47,6 +53,7 @@ import com.topjohnwu.superuser.Shell
 import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
+
 
 class MainActivityX : BaseActivity() {
 
@@ -84,6 +91,41 @@ class MainActivityX : BaseActivity() {
         context = this
         setCustomTheme()
         super.onCreate(savedInstanceState)
+
+        if(true) {
+            Thread.setDefaultUncaughtExceptionHandler { thread, e ->
+                LogsHandler.unhandledException(e)
+                LogsHandler(context).writeToLogFile(
+                    "uncaught exception happened (see end of file):\n\n" +
+                           "\n${BuildConfig.APPLICATION_ID} ${BuildConfig.VERSION_NAME}\n" +
+                        runAsRoot("logcat --pid=${Process.myPid()}").out.joinToString("\n")
+                )
+                if(true) {
+                    val message = LogsHandler.message(e)
+                    object : Thread() {
+                        override fun run() {
+                            Looper.prepare()
+                            Toast.makeText(
+                                MainActivityX.context,
+                                "Uncaught Exception\n${e.message}\nrestarting application...",
+                                Toast.LENGTH_LONG
+                            ).show();
+                            Looper.loop()
+                        }
+                    }.start()
+                    Thread.sleep(5000)
+                    System.exit(2)
+                }
+                if(!true) {
+                    val intent = Intent(context, MainActivityX::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                    //Process.killProcess(Process.myPid())
+                    System.exit(2)
+                }
+            }
+        }
+
         Shell.getShell()
         binding = ActivityMainXBinding.inflate(layoutInflater)
         binding.lifecycleOwner = this
@@ -120,6 +162,26 @@ class MainActivityX : BaseActivity() {
             viewModel.refreshList()
             isNeedRefresh = false
         }
+    }
+
+    override fun onRestart() {
+        super.onRestart()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
+        super.onSaveInstanceState(outState, outPersistentState)
+    }
+
+    override fun onPause() {
+        super.onPause()
+    }
+
+    override fun onStop() {
+        super.onStop()
     }
 
     override fun onBackPressed() {
