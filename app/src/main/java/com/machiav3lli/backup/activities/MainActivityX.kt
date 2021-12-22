@@ -102,11 +102,14 @@ class MainActivityX : BaseActivity() {
         val context = this
         activity = this
 
+        appsSuspendedChecked = false
+
         setCustomTheme()
         super.onCreate(savedInstanceState)
 
         if(true) {
             Thread.setDefaultUncaughtExceptionHandler { thread, e ->
+                appsSuspendedChecked = false
                 LogsHandler.unhandledException(e)
                 LogsHandler(context).writeToLogFile(
                     "uncaught exception happened (see end of file):\n\n" +
@@ -126,7 +129,7 @@ class MainActivityX : BaseActivity() {
                             Looper.loop()
                         }
                     }.start()
-                    Thread.sleep(5000)
+                    Thread.sleep(4000)
                     System.exit(2)
                 }
                 if(!true) {
