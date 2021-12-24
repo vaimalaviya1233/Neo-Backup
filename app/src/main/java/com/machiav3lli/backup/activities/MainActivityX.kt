@@ -332,6 +332,16 @@ class MainActivityX : BaseActivity() {
     fun dismissSnackBar() {
         binding.snackbarText.visibility = View.GONE
     }
+
+    fun whileShowingSnackBar(message: String, todo: () -> Unit) {
+        MainActivityX.activity?.runOnUiThread {
+            MainActivityX.activity?.showSnackBar("cleanup any left over suspended apps")
+        }
+        todo()
+        MainActivityX.activity?.runOnUiThread {
+            MainActivityX.activity?.dismissSnackBar()
+        }
+    }
 }
 
 
