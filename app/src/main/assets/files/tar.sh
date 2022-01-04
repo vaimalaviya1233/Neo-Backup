@@ -32,7 +32,7 @@ if [[ $command == "create" ]]; then
   dir=$1
   shift
 
-  $utilbox tar -c -f "$archive" -C "$dir" $exclude .
+  cd $dir && $utilbox tar -c -f "$archive" $exclude *
 
   exit $?
 
