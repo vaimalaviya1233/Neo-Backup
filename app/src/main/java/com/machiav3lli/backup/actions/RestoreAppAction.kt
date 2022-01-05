@@ -51,50 +51,58 @@ open class RestoreAppAction(context: Context, shell: ShellHandler) : BaseAppActi
         backupDir: StorageFile,
         backupMode: Int
     ): ActionResult {
-        Timber.i("Restoring up: ${app.packageName} [${app.packageLabel}]")
-        val stopProcess = context.isKillBeforeActionEnabled
-        var markerFile: StorageFile? = null
-        if(isSuspended(app.packageName))
-            markerFile = backupDir.createFile(binaryMimeType, SUSPENDED_MARKER_FILE)
-        if (stopProcess) {
-            Timber.d("pre-process package (to avoid file inconsistencies during backup etc.)")
-            preprocessPackage(app.packageName)
-        }
         try {
-            if (backupMode and MODE_APK == MODE_APK) {
-                restorePackage(backupDir, backupProperties)
-                refreshAppInfo(context, app)    // also waits for valid paths
+            Timber.i("Restoring: ${app.packageName} [${app.packageLabel}]")
+            MainActivityX.setOperation(app.packageName, "R pre")
+            val stopProcess = context.isKillBeforeActionEnabled
+            var markerFile: StorageFile? = null
+            if (isSuspended(app.packageName))
+                markerFile = backupDir.createFile(binaryMimeType, SUSPENDED_MARKER_FILE)
+            if (stopProcess) {
+                Timber.d("pre-process package (to avoid file inconsistencies during backup etc.)")
+                preprocessPackage(app.packageName)
             }
-            if (backupMode != MODE_APK)
-                restoreAllData(app, backupProperties, backupDir, backupMode)
-        } catch (e: PackageManagerDataIncompleteException) {
-            return ActionResult(
+            try {
+                if (backupMode and MODE_APK == MODE_APK) {
+                    MainActivityX.setOperation(app.packageName, "R apk")
+                    restorePackage(backupDir, backupProperties)
+                    refreshAppInfo(context, app)    // also waits for valid paths
+                }
+                if (backupMode != MODE_APK)
+                    restoreAllData(app, backupProperties, backupDir, backupMode)
+            } catch (e: PackageManagerDataIncompleteException) {
+                return ActionResult(
                     app,
                     null,
                     "${e.javaClass.simpleName}: ${e.message}. ${context.getString(R.string.error_pmDataIncompleteException_dataRestoreFailed)}",
                     false
-            )
-        } catch (e: RestoreFailedException) {
-            // Unwrap issues with shell commands so users know what command ran and what was the issue
-            val message: String = if (e.cause != null && e.cause is ShellCommandFailedException) {
-                val commandList = e.cause.commands.joinToString("; ")
-                "Shell command failed: ${commandList}\n${
-                    extractErrorMessage(e.cause.shellResult)
-                }"
-            } else {
-                "${e.javaClass.simpleName}: ${e.message}"
+                )
+            } catch (e: RestoreFailedException) {
+                // Unwrap issues with shell commands so users know what command ran and what was the issue
+                val message: String =
+                    if (e.cause != null && e.cause is ShellCommandFailedException) {
+                        val commandList = e.cause.commands.joinToString("; ")
+                        "Shell command failed: ${commandList}\n${
+                            extractErrorMessage(e.cause.shellResult)
+                        }"
+                    } else {
+                        "${e.javaClass.simpleName}: ${e.message}"
+                    }
+                return ActionResult(app, null, message, false)
+            } catch (e: CryptoSetupException) {
+                return ActionResult(app, null, "${e.javaClass.simpleName}: ${e.message}", false)
+            } finally {
+                if (stopProcess) {
+                    Timber.d("post-process package (to set it back to normal operation)")
+                    MainActivityX.setOperation(app.packageName, "R fin")
+                    postprocessPackage(app.packageName)
+                    markerFile?.delete()
+                }
             }
-            return ActionResult(app, null, message, false)
-        } catch (e: CryptoSetupException) {
-            return ActionResult(app, null, "${e.javaClass.simpleName}: ${e.message}", false)
         } finally {
-            if (stopProcess) {
-                Timber.d("post-process package (to set it back to normal operation)")
-                postprocessPackage(app.packageName)
-                markerFile?.delete()
-            }
+            MainActivityX.setOperation(app.packageName)
+            Timber.i("$app: Restore done: $backupProperties")
         }
-        Timber.i("$app: Restore done: $backupProperties")
         return ActionResult(app, backupProperties, "", true)
     }
 
@@ -107,30 +115,35 @@ open class RestoreAppAction(context: Context, shell: ShellHandler) : BaseAppActi
     ) {
         if (backupProperties.hasAppData && backupMode and MODE_DATA == MODE_DATA) {
             Timber.i("[${backupProperties.packageName}] Restoring app's data")
+            MainActivityX.setOperation(app.packageName, "R dat")
             restoreData(app, backupProperties, backupDir, true)
         } else {
             Timber.i("[${backupProperties.packageName}] Skip restoring app's data; not part of the backup or restore mode")
         }
         if (backupProperties.hasDevicesProtectedData && backupMode and MODE_DATA_DE == MODE_DATA_DE) {
             Timber.i("[${backupProperties.packageName}] Restoring app's protected data")
+            MainActivityX.setOperation(app.packageName, "R prt")
             restoreDeviceProtectedData(app, backupProperties, backupDir, true)
         } else {
             Timber.i("[${backupProperties.packageName}] Skip restoring app's device protected data; not part of the backup or restore mode")
         }
         if (backupProperties.hasExternalData && backupMode and MODE_DATA_EXT == MODE_DATA_EXT) {
             Timber.i("[${backupProperties.packageName}] Restoring app's external data")
+            MainActivityX.setOperation(app.packageName, "R ext")
             restoreExternalData(app, backupProperties, backupDir, true)
         } else {
             Timber.i("[${backupProperties.packageName}] Skip restoring app's external data; not part of the backup or restore mode")
         }
         if (backupProperties.hasObbData && backupMode and MODE_DATA_OBB == MODE_DATA_OBB) {
             Timber.i("[${backupProperties.packageName}] Restoring app's obb files")
+            MainActivityX.setOperation(app.packageName, "R obb")
             restoreObbData(app, backupProperties, backupDir, false)
         } else {
             Timber.i("[${backupProperties.packageName}] Skip restoring app's obb files; not part of the backup or restore mode")
         }
         if (backupProperties.hasMediaData && backupMode and MODE_DATA_MEDIA == MODE_DATA_MEDIA) {
             Timber.i("[${backupProperties.packageName}] Restoring app's media files")
+            MainActivityX.setOperation(app.packageName, "R med")
             restoreMediaData(app, backupProperties, backupDir, false)
         } else {
             Timber.i("[${backupProperties.packageName}] Skip restoring app's media files; not part of the backup or restore mode")
@@ -535,6 +548,7 @@ open class RestoreAppAction(context: Context, shell: ShellHandler) : BaseAppActi
         uidgidcon: Array<String>
     ) {
         try {
+            val (uid, gid, con) = uidgidcon
             Timber.i("Getting user/group info and apply it recursively on $targetPath")
             // get the contents. lib for example must be owned by root
             val dataContents: MutableList<String> =
@@ -549,17 +563,17 @@ open class RestoreAppAction(context: Context, shell: ShellHandler) : BaseAppActi
                 Timber.i("No chown targets. Is this an app without any $dataType ? Doing nothing.")
                 return
             }
-            Timber.d("Changing owner and group of '$targetPath' to ${uidgidcon[0]}:${uidgidcon[1]} and selinux context to ${uidgidcon[2]}")
+            Timber.d("Changing owner and group of '$targetPath' to $uid:$gid and selinux context to $con")
             var command =
-                "$utilBoxQuoted chown ${uidgidcon[0]}:${uidgidcon[1]} ${
+                "$utilBoxQuoted chown $uid:$gid ${
                     quote(RootFile(targetPath).absolutePath)
-                } ; $utilBoxQuoted chown -R ${uidgidcon[0]}:${uidgidcon[1]} ${
+                } ; $utilBoxQuoted chown -R $uid:$gid ${
                     quoteMultiple(chownTargets)
                 }"
-            command += if (uidgidcon[2] == "?") //TODO hg42: when does it happen?
+            command += if (con == "?") //TODO hg42: when does it happen?
                 " ; restorecon -RF -v ${quote(targetPath)}"
             else
-                " ; chcon -R -h -v '${uidgidcon[2]}' ${quote(targetPath)}"
+                " ; chcon -R -h -v '$con' ${quote(targetPath)}"
             runAsRoot(command)
         } catch (e: ShellCommandFailedException) {
             val errorMessage = "Could not update permissions for $dataType"
