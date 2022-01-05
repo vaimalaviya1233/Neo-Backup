@@ -85,11 +85,11 @@ open class BackupAppAction(context: Context, shell: ShellHandler) : BaseAppActio
             }
             val backupBuilder = BackupBuilder(context, app.appMetaInfo, appBackupRoot)
             val backupInstanceDir = backupBuilder.backupPath
-            val stopProcess = context.isKillBeforeActionEnabled
+            val pauseApp = context.isPauseApps
             var markerFile: StorageFile? = null
             if (isSuspended(app.packageName))
                 markerFile = appBackupRoot.createFile(binaryMimeType, SUSPENDED_MARKER_FILE)
-            if (stopProcess) {
+            if (pauseApp) {
                 Timber.d("pre-process package (to avoid file inconsistencies during backup etc.)")
                 preprocessPackage(app.packageName)
             }
@@ -161,7 +161,7 @@ open class BackupAppAction(context: Context, shell: ShellHandler) : BaseAppActio
                 Timber.d("Backup deleted: ${backupBuilder.backupPath.delete()}")
                 return ActionResult(app, null, "${e.javaClass.simpleName}: ${e.message}", false)
             } finally {
-                if (stopProcess) {
+                if (pauseApp) {
                     Timber.d("post-process package (to set it back to normal operation)")
                     MainActivityX.setOperation(app.packageName, "B fin")
                     postprocessPackage(app.packageName)

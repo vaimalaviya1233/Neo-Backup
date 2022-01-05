@@ -54,11 +54,11 @@ open class RestoreAppAction(context: Context, shell: ShellHandler) : BaseAppActi
         try {
             Timber.i("Restoring: ${app.packageName} [${app.packageLabel}]")
             MainActivityX.setOperation(app.packageName, "R pre")
-            val stopProcess = context.isKillBeforeActionEnabled
+            val pauseApp = context.isPauseApps
             var markerFile: StorageFile? = null
             if (isSuspended(app.packageName))
                 markerFile = backupDir.createFile(binaryMimeType, SUSPENDED_MARKER_FILE)
-            if (stopProcess) {
+            if (pauseApp) {
                 Timber.d("pre-process package (to avoid file inconsistencies during backup etc.)")
                 preprocessPackage(app.packageName)
             }
@@ -92,7 +92,7 @@ open class RestoreAppAction(context: Context, shell: ShellHandler) : BaseAppActi
             } catch (e: CryptoSetupException) {
                 return ActionResult(app, null, "${e.javaClass.simpleName}: ${e.message}", false)
             } finally {
-                if (stopProcess) {
+                if (pauseApp) {
                     Timber.d("post-process package (to set it back to normal operation)")
                     MainActivityX.setOperation(app.packageName, "R fin")
                     postprocessPackage(app.packageName)
@@ -831,22 +831,31 @@ open class RestoreAppAction(context: Context, shell: ShellHandler) : BaseAppActi
 
     @Throws(PackageManagerDataIncompleteException::class)
     private fun refreshAppInfo(context: Context, app: AppInfo) {
-        // Try it multiple times with some waiting time in between to give PackageManager some time to
-        // properly initialize the package and populate the paths.
         val sleepTimeMs = 1000L
-        var timeWaited = 0L
-        val maxWait = context.getDefaultSharedPreferences().getInt(PREFS_INTERNAL_RETRIEVE_APP_META_ATTEMPTS, DEFAULT_RETRIEVE_APP_META_MAXWAIT)
+
+        // delay before first try
+        val delayMs = context.getDefaultSharedPreferences().getInt("delayBeforeRefreshAppInfo", 0) * 1000L
+        var timeWaitedMs = 0L
+        do {
+            Thread.sleep(sleepTimeMs)
+            timeWaitedMs += sleepTimeMs
+        } while (timeWaitedMs < delayMs)
+
+        // try multiple times to get valid paths from PackageManager
+        // maxWaitMs is cumulated sleep time between tries
+        val maxWaitMs = context.getDefaultSharedPreferences().getInt("refreshAppInfoTimeout", 30) * 1000L
+        timeWaitedMs = 0L
         var attemptNo = 0
         do {
-            if (timeWaited >= maxWait*1000L) {
-                throw PackageManagerDataIncompleteException(timeWaited/1000)
+            if (timeWaitedMs >= maxWaitMs) {
+                throw PackageManagerDataIncompleteException(timeWaitedMs / 1000L)
             }
-            if (timeWaited > 0) {
-                Timber.d("[${app.packageName}] paths were missing after data fetching data from PackageManager; attempt $attemptNo, waited ${timeWaited/1000} of $maxWait seconds")
+            if (timeWaitedMs > 0) {
+                Timber.d("[${app.packageName}] paths were missing after data fetching data from PackageManager; attempt $attemptNo, waited ${timeWaitedMs / 1000L} of $maxWaitMs seconds")
                 Thread.sleep(sleepTimeMs)
             }
             app.refreshFromPackageManager(context)
-            timeWaited += sleepTimeMs
+            timeWaitedMs += sleepTimeMs
             attemptNo++
         } while (!this.isPlausiblePackageInfo(app))
     }
