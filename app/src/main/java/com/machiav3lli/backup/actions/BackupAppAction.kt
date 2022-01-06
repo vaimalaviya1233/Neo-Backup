@@ -435,6 +435,8 @@ open class BackupAppAction(context: Context, shell: ShellHandler) : BaseAppActio
                 .split("\n")
                 .filterNot { line ->
                        line.isBlank()
+                    || line.contains("empty archive")
+                    || line.contains("fifo")
                     || line.contains("tar: unknown file type") // e.g. socket 140000
                 }
             if(errLines.isNotEmpty()) {
