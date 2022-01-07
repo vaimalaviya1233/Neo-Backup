@@ -32,9 +32,10 @@ if [[ $command == "create" ]]; then
   dir=$1
   shift
 
-  cd $dir && (
-    ($utilbox ls -1A | $utilbox tar -c -f "$archive" $exclude -T -) || (dd if=/dev/zero bs=1024c count=1 2>/dev/null)
-  )
+  #cd $dir && (
+  #  ($utilbox ls -1A | $utilbox tar -c -f "$archive" $exclude -T -) || (dd if=/dev/zero bs=1024c count=1 2>/dev/null)
+  #)
+  $utilbox tar -c -f "$archive" -C "$dir" $exclude .
 
   exit $?
 
