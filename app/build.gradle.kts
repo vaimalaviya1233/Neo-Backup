@@ -86,7 +86,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
             manifestPlaceholders["appIconRound"] = "@mipmap/ic_launcher_round"
             signingConfig = signingConfigs.getByName("hg42test")
@@ -102,9 +102,11 @@ android {
             val variant = this
             variant.outputs.all {
                 val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-                //println("--< ${output.outputFileName}")
-                output.outputFileName = "oabx-${output.name.replace("-release", "")}-${buildVersion}.apk"
-                //println("--> ${output.outputFileName}")
+                var name = output.name
+                name = name.replace("-release", "")
+                name = name.replace("-debug", "-d")
+                name = name.replace("feature", "ft")
+                output.outputFileName = "oabx-${name}-${buildVersion}.apk"
             }
         }
     }
