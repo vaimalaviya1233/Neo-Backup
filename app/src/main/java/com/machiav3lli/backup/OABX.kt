@@ -20,6 +20,10 @@ package com.machiav3lli.backup
 import android.app.Application
 import android.content.Context
 import android.util.LruCache
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.machiav3lli.backup.activities.MainActivityX
 import com.machiav3lli.backup.handler.ShellHandler
 import com.machiav3lli.backup.handler.WorkHandler
@@ -28,7 +32,7 @@ import com.machiav3lli.backup.utils.getDefaultSharedPreferences
 import timber.log.Timber
 import java.lang.ref.WeakReference
 
-class OABX : Application() {
+class OABX : Application(), LifecycleObserver {
 
     var cache: LruCache<String, MutableList<AppInfo>> = LruCache(4000)
 
@@ -78,6 +82,8 @@ class OABX : Application() {
         super.onCreate()
         appRef = WeakReference(this)
 
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+
         Timber.plant(object : Timber.DebugTree() {
 
             override fun log(
@@ -106,5 +112,15 @@ class OABX : Application() {
         work = work?.release()
         appRef = WeakReference(null)
         super.onTerminate()
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+    fun onAppBackgrounded() {
+        Timber.d("App in background")
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_START)
+    fun onAppForegrounded() {
+        Timber.d("App in foreground")
     }
 }
