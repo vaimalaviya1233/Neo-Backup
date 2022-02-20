@@ -143,7 +143,10 @@ class OABX : Application(), LifecycleObserver {
         })
 
         initShellHandler()
+
         work = WorkHandler(context)
+        if (prefFlag("cancelOnStart", false))
+            work?.cancel()
         work?.prune()
     }
 
