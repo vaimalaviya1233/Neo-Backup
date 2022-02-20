@@ -60,8 +60,11 @@ open class RestoreAppAction(context: Context, work: AppActionWork?, shell: Shell
                     restorePackage(backupDir, backupProperties)
                     refreshAppInfo(context, app)    // also waits for valid paths
                 }
-                if (backupMode != MODE_APK)
+                if (backupMode != MODE_APK) {
+                    if ( ! isPlausiblePath(app.dataPath, app.packageName) )
+                        refreshAppInfo(context, app)    // wait for valid paths
                     restoreAllData(work, app, backupProperties, backupDir, backupMode)
+                }
             } catch (e: PackageManagerDataIncompleteException) {
                 return ActionResult(
                     app,
