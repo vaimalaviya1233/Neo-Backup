@@ -22,3 +22,4 @@
 
 # This fixes crash in fragments in builds with minify
 -keep class * extends androidx.fragment.app.Fragment{}
+-dontwarn com.google.errorprone.annotations.Immutable
