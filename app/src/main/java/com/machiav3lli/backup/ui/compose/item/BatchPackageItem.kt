@@ -60,7 +60,6 @@ fun BatchPackageItem(
             }
         )
     }
-    packageItem.ensureBackupList()
 
     OutlinedCard(
         modifier = Modifier,
