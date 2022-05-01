@@ -62,6 +62,12 @@
 
         <androidx.preference.CheckBoxPreference
             android:defaultValue="true"
+            android:key="usePackageCache"
+            android:summary="cache Packages (test if this makes a difference, especially about correctness)"
+            android:title="usePackageCache" />
+
+        <androidx.preference.CheckBoxPreference
+            android:defaultValue="true"
             android:key="useColumnNameSAF"
             android:summary=""
             android:title="useColumnNameSAF" />
