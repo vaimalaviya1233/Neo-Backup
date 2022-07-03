@@ -340,7 +340,7 @@ fun Context.getBackupPackageDirectories(): List<StorageFile> {
     try {
         return backupRoot.listFiles()
             .filter {
-                //it.isDirectory &&     //TODO RCX gives us a false, so temporary don't check this, the properties files are taken as the backups anyways
+                it.isDirectory &&     //TODO hg42 RCX gives us a false, so temporary don't check this, the properties files are taken as the backups anyways
                         it.name != LOG_FOLDER_NAME &&
                         it.name != EXPORTS_FOLDER_NAME &&
                         !(it.name?.startsWith('.') ?: false)
